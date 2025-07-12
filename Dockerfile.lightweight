@@ -1,15 +1,21 @@
-FROM mcr.microsoft.com/openjdk/jdk:21-ubuntu AS runtime-build
+# Stage 1: Build the custom JRE
+FROM eclipse-temurin:17-jdk-alpine AS jre-builder
+RUN apk update && apk add binutils # Install binutils for jlink
 RUN $JAVA_HOME/bin/jlink \
-    --add-modules java.base \
+    --verbose \
+    --add-modules ALL-MODULE-PATH \
     --strip-debug \
     --no-man-pages \
     --no-header-files \
     --compress=2 \
-    --output /javaruntime
+    --output /optimized-jdk-17
 
+# Stage 2: Use the custom JRE and build the app image
 FROM alpine:latest
-COPY --from=runtime-build /javaruntime /opt/java
-ENV PATH="/opt/java/bin:$PATH"
+ENV JAVA_HOME=/opt/jdk/jdk-17
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+COPY --from=jre-builder /optimized-jdk-17 $JAVA_HOME
+# Add your application code and other configurations here
 WORKDIR /app
 COPY /target/*.jar devops-integration.jar
 EXPOSE 8081
