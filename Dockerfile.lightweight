@@ -1,0 +1,16 @@
+FROM mcr.microsoft.com/openjdk/jdk:21-ubuntu AS runtime-build
+RUN $JAVA_HOME/bin/jlink \
+    --add-modules java.base \
+    --strip-debug \
+    --no-man-pages \
+    --no-header-files \
+    --compress=2 \
+    --output /javaruntime
+
+FROM alpine:latest
+COPY --from=runtime-build /javaruntime /opt/java
+ENV PATH="/opt/java/bin:$PATH"
+WORKDIR /app
+COPY /target/*.jar devops-integration.jar
+EXPOSE 8081
+ENTRYPOINT ["java", "-jar", "devops-integration.jar"]
